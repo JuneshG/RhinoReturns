@@ -1,45 +1,26 @@
-name: Build and Test Django App
+FROM python:3.11-slim
 
-on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
+# Set the working directory in the container
+WORKDIR /app
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
+# Install required system packages
+RUN apt-get update && apt-get install -y \
+    gcc \
+    pkg-config \
+    libmariadb-dev-compat \
+    libmariadb-dev
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+# Copy the requirements file into the container
+COPY requirements.txt /app/
 
-      # Set up Docker
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+# Install any dependencies
+RUN pip install --no-cache-dir -r requirements.txt
 
-      # Log in to DockerHub
-      - name: Log in to DockerHub
-        uses: docker/login-action@v1
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+# Copy the rest of the application code
+COPY . /app
 
-      # Build the Docker image
-      - name: Build the Docker image
-        run: docker build . -t juneshg/rhino_returns:latest
+# Make port 8000 available to the world outside this container
+EXPOSE 8000
 
-      # Push the Docker image to DockerHub
-      - name: Push the Docker image
-        run: docker push juneshg/rhino_returns:latest
-
-      # Run the container and capture its ID
-      - name: Run the container
-        run: docker run -d -p 8000:8000 juneshg/rhino_returns:latest
-        id: container_id
-
-      # Run Pytest in the container
-      - name: Run Pytest tests
-        run: docker exec ${{ steps.container_id.outputs.id }} pytest
+# Define the command to run your application
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
