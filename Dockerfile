@@ -1,33 +1,45 @@
-# Step 1: Use an official Python runtime as a parent image
-FROM python:3.11-slim
+name: Build and Test Django App
 
-# Step 2: Set the working directory in the container
-WORKDIR /app
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
 
-# Step 3: Install required system packages
-RUN apt-get update && apt-get install -y \
-    gcc \
-    pkg-config \
-    libmariadb-dev-compat \
-    libmariadb-dev
+jobs:
+  build:
+    runs-on: ubuntu-latest
 
-# Step 4: Copy the requirements file into the container
-COPY requirements.txt /app/
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-# Step 5: Install any dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+      # Set up Docker
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
 
-# Add MySQL client installation
-# RUN apt-get update && apt-get install -y mysql-client
-RUN apt-get update && apt-get install -y default-mysql-client
+      # Log in to DockerHub
+      - name: Log in to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
+      # Build the Docker image
+      - name: Build the Docker image
+        run: docker build . -t juneshg/rhino_returns:latest
 
+      # Push the Docker image to DockerHub
+      - name: Push the Docker image
+        run: docker push juneshg/rhino_returns:latest
 
-# Step 6: Copy the rest of the application code
-COPY . /app
+      # Run the container and capture its ID
+      - name: Run the container
+        run: docker run -d -p 8000:8000 juneshg/rhino_returns:latest
+        id: container_id
 
-# Step 7: Make port 8000 available to the world outside this container
-EXPOSE 8000
-
-# Step 8: Define the command to run your application
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+      # Run Pytest in the container
+      - name: Run Pytest tests
+        run: docker exec ${{ steps.container_id.outputs.id }} pytest
