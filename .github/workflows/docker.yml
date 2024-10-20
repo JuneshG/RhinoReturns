@@ -29,14 +29,14 @@ jobs:
 
       # Build the Docker image from the Dockerfile
       - name: Build the Docker image
-        run: docker build . -t yourdockerusername/yourimage:latest
+        run: docker build . -t juneshg/rhino_returns:latest
 
       # (Optional) Push the Docker image to DockerHub
       - name: Push the Docker image
-        run: docker push yourdockerusername/yourimage:latest
+        run: docker push juneshg/rhino_returns:latest
 
       # Run Pytest in the container (you can also run tests)
       - name: Run Pytest tests
         run: |
-          docker run -d -p 8000:8000 yourdockerusername/yourimage:latest
+          docker run -d -p 8000:8000 juneshg/rhino_returns:latest
           docker exec -it <container_id> pytest
